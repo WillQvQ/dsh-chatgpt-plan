@@ -20,6 +20,8 @@ This is an unofficial local plugin with MIT-licensed source code. Each user auth
 
 Models and limits depend on what OpenAI returns for your account. “ChatGPT Pro Plan” on the icon is illustration text: it does not mean the plugin is Pro-only or includes unlimited usage. Recheck compatibility after upgrading DSH.
 
+For details on the host's pi-ai dependency, the implementations this plugin reuses, and version compatibility, see [Relationship with DSH and pi-ai](#relationship-with-dsh-and-pi-ai) below.
+
 ## Install
 
 Download **`dsh-chatgpt-plan-0.1.0.tgz`** from the [v0.1.0 release](https://github.com/WillQvQ/dsh-chatgpt-plan/releases/tag/v0.1.0). Use this plugin package; GitHub's automatically generated Source code archives are for browsing the source.
@@ -108,6 +110,40 @@ Before uninstalling, sign out on the account page and select another provider as
 ```
 
 Uninstalling does not itself disconnect the app at OpenAI. Follow the sign-out instructions above to revoke access completely.
+
+## Relationship with DSH and pi-ai
+
+**You do not need to install the Pi app separately.** This plugin reuses `@deepseek-ai/dsh-llm-pi-ai` and `@earendil-works/pi-ai` supplied by the DSH host. The verified combination is DSH **0.2.0-rc.2** with pi-ai **0.87.1**; these versions are also declared in this project's [peerDependencies](package.json).
+
+### Where DSH depends on pi-ai
+
+In the DSH 0.2.0-rc.2 source reviewed here, direct use of pi-ai is concentrated in the [`@deepseek-ai/dsh-llm-pi-ai`](https://github.com/deepseek-ai/deepseek-harness/tree/639ed015397290b3745d163aafe02ffee4aa3f84/packages/llm/llm-pi-ai/src) model adapter:
+
+- **Provider and model catalogs, and authentication interfaces:** connects pi-ai's provider definitions, model capabilities, and authentication flows to DSH's configuration and credential management.
+- **Request protocols and streaming:** uses pi-ai implementations such as OpenAI Responses, Chat Completions, and Anthropic Messages to send requests and process response events.
+- **Conversion between DSH and pi-ai:** DSH's adapter code translates message context, tool definitions, stream events, usage, and replay metadata for DSH's model interface.
+
+DSH continues to provide the agent loop, tool execution, file permissions, conversation storage, plugin system, and interface. Its [native DeepSeek adapter](https://github.com/deepseek-ai/deepseek-harness/tree/639ed015397290b3745d163aafe02ffee4aa3f84/packages/llm/llm-deepseek) also has a separate implementation; the dependency described above is concentrated in model integration.
+
+### What this plugin reuses
+
+This plugin registers only the ChatGPT plan provider. DSH's overall use of pi-ai is broader than the parts this plugin calls directly.
+
+| Implementation source | Role in this plugin |
+| --- | --- |
+| DSH's bundled `PiAiAdapter` | Connects the plugin's models and responses to DSH's model interface, reusing message, tool, and stream-event conversion |
+| DSH's bundled `pi-ai/api/openai-responses` | Builds Responses requests and parses streamed responses through `stream` / `streamSimple` |
+| This plugin | Independent ChatGPT authorization, account management, credential renewal, discovery of models available to the account, and adaptation of plan request parameters and local tool calls |
+
+See [index.mjs](index.mjs) for imports and adapter registration, and [adapter.mjs](adapter.mjs) for request adaptation. The plugin implements ChatGPT sign-in in [oauth.mjs](oauth.mjs); it does not read Pi or Codex login files.
+
+### How this relates to newer pi-ai versions
+
+For comparison, [pi-ai 1.0.2 already includes a Sign in with ChatGPT implementation](https://github.com/earendil-works/pi/blob/v1.0.2/packages/ai/src/auth/oauth/openai-chatgpt.ts). This project targets the DSH / pi-ai combination verified here and packages ChatGPT plan access as a separately installable DSH plugin with an account-management interface.
+
+That upstream capability does not establish that an older DSH release includes it, or that replacing the host's pi-ai with 1.x will remain compatible. Updating pi-ai elsewhere on the system or in another project does not update the dependency bundled in DSH. After upgrading DSH or changing dependencies, recheck plugin loading, authorization, model discovery, streaming replies, and tool calls.
+
+See the [DSH community discussion](https://github.com/deepseek-ai/deepseek-harness/discussions/8851) for discussion of extension interfaces suitable for long-term maintenance.
 
 ## Build from source and develop
 

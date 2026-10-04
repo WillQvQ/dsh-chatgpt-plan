@@ -20,6 +20,8 @@
 
 模型与限制以 OpenAI 为该账号返回的结果为准。图标中的 “ChatGPT Pro Plan” 是插画文字，不表示仅支持 Pro，也不表示包含无限额度。DSH 升级后需要重新核对兼容性。
 
+关于宿主提供的 pi-ai、本插件复用的实现及版本兼容性，见后文 [pi-ai 依赖关系](#pi-ai-依赖关系)。
+
 ## 安装
 
 从 [v0.1.0 Releases](https://github.com/WillQvQ/dsh-chatgpt-plan/releases/tag/v0.1.0) 下载 **`dsh-chatgpt-plan-0.1.0.tgz`**。使用这个插件包；GitHub 自动生成的 Source code 压缩包用于查看源码。
@@ -108,6 +110,40 @@
 ```
 
 卸载插件不等于在 OpenAI 端断开应用。如需完全撤销访问，请同时按上面的退出说明操作。
+
+## pi-ai 依赖关系
+
+**使用本插件不需要另外安装 Pi App。** 本插件复用 DSH 宿主提供的 `@deepseek-ai/dsh-llm-pi-ai` 和 `@earendil-works/pi-ai`；当前验证组合是 DSH **0.2.0-rc.2** 与 pi-ai **0.87.1**，对应版本也声明在本项目的 [peerDependencies](package.json) 中。
+
+### DSH 主要在哪里依赖 pi-ai
+
+在这里核对的 DSH 0.2.0-rc.2 源码中，对 pi-ai 的直接使用主要集中在 [`@deepseek-ai/dsh-llm-pi-ai`](https://github.com/deepseek-ai/deepseek-harness/tree/639ed015397290b3745d163aafe02ffee4aa3f84/packages/llm/llm-pi-ai/src) 这一模型适配层：
+
+- **供应商与模型目录、认证接口**：接入 pi-ai 的供应商定义、模型能力和认证流程，并与 DSH 的配置及凭证管理衔接。
+- **请求协议与流式处理**：使用 pi-ai 的 OpenAI Responses、Chat Completions、Anthropic Messages 等协议实现，处理返回的响应事件。
+- **DSH 与 pi-ai 之间的转换**：由 DSH 的适配代码转换消息上下文、工具定义、流式事件、用量和历史回放信息，供 DSH 的模型接口使用。
+
+Agent 循环、工具执行、文件权限、会话存储、插件系统和界面仍由 DSH 提供。DSH 的[原生 DeepSeek 适配器](https://github.com/deepseek-ai/deepseek-harness/tree/639ed015397290b3745d163aafe02ffee4aa3f84/packages/llm/llm-deepseek)也有独立实现；上述依赖集中在模型接入层。
+
+### 本插件具体复用了什么
+
+本插件只注册 ChatGPT 套餐这一提供方。DSH 对 pi-ai 的整体使用范围，比本插件直接使用的部分更广。
+
+| 实现来源 | 在本插件中的职责 |
+| --- | --- |
+| DSH 自带的 `PiAiAdapter` | 将插件提供的模型与请求结果接入 DSH 的模型接口，复用消息、工具和流式事件转换 |
+| DSH 自带的 `pi-ai/api/openai-responses` | 构造 Responses 请求并解析流式响应，调用入口为 `stream` / `streamSimple` |
+| 本插件 | ChatGPT 独立授权、账号管理、凭证续期、账号可用模型发现，以及套餐请求参数和本地工具调用的适配 |
+
+具体导入与注册见 [index.mjs](index.mjs)，请求适配见 [adapter.mjs](adapter.mjs)。插件的 ChatGPT 登录流程由 [oauth.mjs](oauth.mjs) 实现，不读取 Pi 或 Codex 的登录文件。
+
+### 如何理解与新版 pi-ai 的关系
+
+作为版本对照，[pi-ai 1.0.2 已包含 Sign in with ChatGPT 的实现](https://github.com/earendil-works/pi/blob/v1.0.2/packages/ai/src/auth/oauth/openai-chatgpt.ts)。本项目针对这里验证的 DSH / pi-ai 组合，把 ChatGPT 套餐接入做成可单独安装、带账号管理界面的 DSH 插件。
+
+上游已有这一能力，不代表旧版 DSH 已经包含它，也不代表将宿主中的 pi-ai 直接替换成 1.x 就能保持兼容。单独升级系统或其他项目里的 pi-ai，也不会升级 DSH 安装包内的依赖。升级 DSH 或调整依赖后，需要重新验证插件加载、授权、模型发现、流式回复和工具调用。
+
+关于长期维护接口的讨论，见 [DSH 社区帖子](https://github.com/deepseek-ai/deepseek-harness/discussions/8851)。
 
 ## 从源码打包与开发
 
