@@ -1,5 +1,5 @@
 import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai';
-import { resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm';
+import { resolveImageAttachmentAccess, resolveRetryPolicy } from '@deepseek-ai/dsh-llm';
 import * as responses from '@earendil-works/pi-ai/api/openai-responses';
 import { ChatGPTAuth } from './oauth.mjs';
 import { createAdapter, PROVIDER } from './adapter.mjs';
@@ -19,7 +19,7 @@ export async function apply(ctx) {
   try { management = await startManagement(auth, { network, profile: location.profile }); }
   catch (error) { await network.close(); throw error; }
   ctx.on('dispose', () => { management.close(); void network.close(); });
-  const adapter = createAdapter({ PiAiAdapter, responses, resolveImageAttachmentAccess }, auth, ctx);
+  const adapter = createAdapter({ PiAiAdapter, responses, resolveImageAttachmentAccess, resolveRetryPolicy }, auth, ctx);
   const disposeAdapter = ctx.llm.registerAdapter([PROVIDER], adapter);
   // Model-picker clients refresh on the same event as native provider updates.
   auth.onChange = () => disposeAdapter.replace([PROVIDER]);

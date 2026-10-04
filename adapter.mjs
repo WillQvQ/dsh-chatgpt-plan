@@ -39,7 +39,9 @@ export function catalogModels(entries) {
   });
 }
 
-export function createAdapter({ PiAiAdapter, responses, resolveImageAttachmentAccess }, auth, ctx) {
+export function createAdapter({ PiAiAdapter, responses, resolveImageAttachmentAccess, resolveRetryPolicy }, auth, ctx) {
+  // PiAiAdapter consumes a resolved policy, including retry codes and backoff.
+  const retryPolicy = resolveRetryPolicy({ mode: 'normal', maxRetries: 2 }, `${PROVIDER}.retryPolicy`);
   let fingerprint, profiles;
   const getProfiles = () => {
     let account;
@@ -63,13 +65,13 @@ export function createAdapter({ PiAiAdapter, responses, resolveImageAttachmentAc
     };
     profiles = new Map([[PROVIDER, { provider: PROVIDER, displayName: DISPLAY_NAME, piProvider: provider,
       transport: 'sse', streamIdleTimeoutMs: 300000, maxRequestImageBytes: 20971520, requestImagePixelBudget: 4194304, requestImageMaxBytes: 1048576,
-      configuredMaxTokens: new Map(), modelErrors: new Map(), retryPolicy: { mode: 'normal', maxRetries: 2 },
+      configuredMaxTokens: new Map(), modelErrors: new Map(), retryPolicy,
     }]]);
     fingerprint = stamp;
     return profiles;
   };
   return new PiAiAdapter({ profiles: getProfiles, resolveApiKey: async () => undefined,
     resolveAttachments: () => ctx?.get('attachments'),
-    resolveImageAccess: (attachments, ref) => resolveImageAttachmentAccess?.(attachments, ref, path => ctx?.get('fs')?.processPathFromHostPath(path)),
+    resolveImageAccess: (attachments, ref) => resolveImageAttachmentAccess?.(attachments, path => ctx?.get('fs')?.processPathFromHostPath(path), ref),
   });
 }

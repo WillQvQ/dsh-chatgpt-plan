@@ -51,7 +51,7 @@ try {
   const auth = new ChatGPTAuth({ store, fetcher: network.fetch });
   let refreshes = 0;
   auth.tokenRequest = async params => { assert.equal(params.grant_type, 'refresh_token'); refreshes++; return { access_token: 'rotated-fake', refresh_token: 'rotated-refresh', token_type: 'Bearer', expires_in: 3600, scope: PLAN_SCOPE }; };
-  const adapter = createAdapter({ PiAiAdapter, responses }, auth);
+  const adapter = createAdapter({ PiAiAdapter, responses, resolveRetryPolicy: llm.resolveRetryPolicy }, auth);
   const messages = [llm.createUserMessage({ content: [{ type: 'text', text: 'hello' }], source: { kind: 'user' } })];
   const args = { provider: PROVIDER, model: 'gpt-test', messages, tools: [
     { name: 'echo_probe', description: 'Echo', parameters: { type: 'object', properties: {} } },

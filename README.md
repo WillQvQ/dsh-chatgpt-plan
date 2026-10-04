@@ -12,7 +12,7 @@
 
 | 项目 | 版本 / 要求 |
 | --- | --- |
-| 插件 | **0.1.1** |
+| 插件 | **0.1.2** |
 | DeepSeek Harness | **0.2.0-rc.2** |
 | DSH 使用的 pi-ai | **0.87.1**（由宿主提供） |
 | 已验证的桌面环境 | macOS；其他平台尚未验证 |
@@ -24,13 +24,13 @@
 
 ## 安装
 
-从 [v0.1.1 Releases](https://github.com/WillQvQ/dsh-chatgpt-plan/releases/tag/v0.1.1) 下载 **`dsh-chatgpt-plan-0.1.1.tgz`**。使用这个插件包；GitHub 自动生成的 Source code 压缩包用于查看源码。
+从 [v0.1.2 Releases](https://github.com/WillQvQ/dsh-chatgpt-plan/releases/tag/v0.1.2) 下载 **`dsh-chatgpt-plan-0.1.2.tgz`**。使用这个插件包；GitHub 自动生成的 Source code 压缩包用于查看源码。
 
 先完全退出 DSH。在 macOS 终端执行以下命令（假设文件保存在下载目录，App 安装在 `/Applications`）：
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add "$HOME/Downloads/dsh-chatgpt-plan-0.1.1.tgz"
+  plugin --profile desktop add "$HOME/Downloads/dsh-chatgpt-plan-0.1.2.tgz"
 ```
 
 安装过程会解析 `undici` 等运行时依赖，需要能够访问包仓库。不要仅复制单个源码文件。安装完成后重新打开 DSH，确认插件列表中的 `dsh-chatgpt-plan` 已启用。
@@ -87,8 +87,16 @@
 | 切换账号后模型不可用 | 重新选择新账号实际提供的模型 |
 | 提示授权失效 | 在账号页重新登录，不要复制其他应用的 token 文件 |
 | 提示凭据权限异常 | 检查文件属于当前用户、不是软链接，且只允许所有者读写；不要把账号文件发到 Issue |
-| 恢复目标时提示 `objective and max_goal_rounds are valid only with action edit` | 升级到 **0.1.1** 并重启 DSH；详见下方说明 |
+| 恢复目标时提示 `objective and max_goal_rounds are valid only with action edit` | 升级到 **0.1.2** 并重启 DSH；详见下方说明 |
 | 提示 `stale goal ref` 或 `the model cannot resume a paused goal` | 按下方说明检查目标版本与暂停状态 |
+
+### 图片与错误恢复（0.1.2 修复）
+
+如果读取图片后出现 `Attachment reference is invalid.`，或本轮运行失败显示 `Cannot read properties of undefined (reading 'includes')`，请升级到 **0.1.2** 并完全重启 DSH，再在原会话中重试。
+
+旧版本调用 DSH 图片附件函数时传反了路径映射与附件引用参数，导致带图片的模型请求在本地构造阶段失败；同时，插件提供的重试策略缺少错误码列表和退避参数，错误恢复又触发第二次异常，掩盖了原始原因。0.1.2 修正了参数顺序，并使用 DSH 的策略解析器补全重试配置。
+
+修复覆盖用户图片和工具结果中的图片，包括 `read_image` 读取的桌面截图。一次 Kimi CU 截图触发了这个问题，但问题位于本插件的模型适配层，不代表 Kimi CU 连接失败。插件不会安装或管理 Kimi CU；模型仍须支持图片输入。
 
 ### 目标恢复与工具参数错误
 
@@ -170,16 +178,18 @@ npm test
 npm pack --ignore-scripts
 ```
 
-`npm test` 使用 Node 内置测试工具和模拟响应，不需要真实账号、互联网或已安装的 DSH 宿主依赖。`npm pack` 生成 `dsh-chatgpt-plan-0.1.1.tgz`，按前述命令安装；实际运行的依赖由 DSH 安装过程解析。
+`npm test` 使用 Node 内置测试工具和模拟响应，不需要真实账号、互联网或已安装的 DSH 宿主依赖。`npm pack` 生成 `dsh-chatgpt-plan-0.1.2.tgz`，按前述命令安装；实际运行的依赖由 DSH 安装过程解析。
 
 测试覆盖账号隔离、PKCE / 身份校验、切换取消、续期退避、401 重试、撤销、存储权限、配置隔离、端口冲突、网络设置和管理页访问控制。在安装了兼容版本 DSH 的 macOS 上，还可运行原生适配器模拟测试：
 
 ```sh
 ELECTRON_RUN_AS_NODE=1 "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness" \
   scripts/wire-test.mjs
+ELECTRON_RUN_AS_NODE=1 "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness" \
+  scripts/image-wire-test.mjs
 ```
 
-这个测试也使用模拟网络，并检查经过 DSH / pi-ai 转换后的请求明确包含 `strict: false`、可选工具参数仍然可选，覆盖账号切换与 401 续期重试。模拟通过不代表任意真实账号都具备接入资格；真实验证需要账号所有者完成授权。
+这两项测试也使用模拟网络。图片测试通过 DSH 原生附件存储、模型适配器和重试执行器，覆盖用户图片、工具截图、无效附件、原始错误保留及最多两次请求重试。另一项测试检查经过 DSH / pi-ai 转换后的请求明确包含 `strict: false`、可选工具参数仍然可选，覆盖账号切换与 401 续期重试。模拟通过不代表任意真实账号都具备接入资格；真实验证需要账号所有者完成授权。
 
 ## 许可与图标
 

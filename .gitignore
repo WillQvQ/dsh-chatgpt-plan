@@ -21,6 +21,7 @@
 /scripts/*
 !/scripts/runtime.mjs
 !/scripts/wire-test.mjs
+!/scripts/image-wire-test.mjs
 !/test/
 /test/*
 !/test/integration.test.mjs
