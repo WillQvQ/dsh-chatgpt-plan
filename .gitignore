@@ -1,0 +1,26 @@
+# Publish an explicit source allowlist. Keep local credentials, diagnostics,
+# screenshots, downloaded docs, artwork history, backups and packages private.
+*
+!/.gitignore
+!/README.md
+!/README.en.md
+!/LICENSE
+!/package.json
+!/index.mjs
+!/adapter.mjs
+!/oauth.mjs
+!/network.mjs
+!/storage.mjs
+!/management.mjs
+!/client.js
+!/cordis.patch.yml
+!/assets/
+/assets/*
+!/assets/icon.webp
+!/scripts/
+/scripts/*
+!/scripts/runtime.mjs
+!/scripts/wire-test.mjs
+!/test/
+/test/*
+!/test/integration.test.mjs

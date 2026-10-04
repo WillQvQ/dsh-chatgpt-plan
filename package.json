@@ -1,0 +1,62 @@
+{
+  "name": "dsh-chatgpt-plan",
+  "version": "0.1.0",
+  "description": "Use your ChatGPT plan in DeepSeek Harness with independent Sign in with ChatGPT authorization",
+  "type": "module",
+  "main": "index.mjs",
+  "icon": "./assets/icon.webp",
+  "exports": {
+    ".": "./index.mjs",
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.mjs",
+    "adapter.mjs",
+    "oauth.mjs",
+    "network.mjs",
+    "storage.mjs",
+    "management.mjs",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md",
+    "README.en.md",
+    "LICENSE",
+    "assets/icon.webp"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-llm": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-llm-pi-ai": "0.2.0-rc.2",
+    "@earendil-works/pi-ai": "0.87.1"
+  },
+  "dependencies": {
+    "undici": "^7.0.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WillQvQ/dsh-chatgpt-plan.git"
+  },
+  "homepage": "https://github.com/WillQvQ/dsh-chatgpt-plan#readme",
+  "bugs": {
+    "url": "https://github.com/WillQvQ/dsh-chatgpt-plan/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
