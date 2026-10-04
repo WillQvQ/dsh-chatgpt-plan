@@ -12,7 +12,7 @@
 
 | 项目 | 版本 / 要求 |
 | --- | --- |
-| 插件 | **0.1.0** |
+| 插件 | **0.1.1** |
 | DeepSeek Harness | **0.2.0-rc.2** |
 | DSH 使用的 pi-ai | **0.87.1**（由宿主提供） |
 | 已验证的桌面环境 | macOS；其他平台尚未验证 |
@@ -24,13 +24,13 @@
 
 ## 安装
 
-从 [v0.1.0 Releases](https://github.com/WillQvQ/dsh-chatgpt-plan/releases/tag/v0.1.0) 下载 **`dsh-chatgpt-plan-0.1.0.tgz`**。使用这个插件包；GitHub 自动生成的 Source code 压缩包用于查看源码。
+从 [v0.1.1 Releases](https://github.com/WillQvQ/dsh-chatgpt-plan/releases/tag/v0.1.1) 下载 **`dsh-chatgpt-plan-0.1.1.tgz`**。使用这个插件包；GitHub 自动生成的 Source code 压缩包用于查看源码。
 
 先完全退出 DSH。在 macOS 终端执行以下命令（假设文件保存在下载目录，App 安装在 `/Applications`）：
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add "$HOME/Downloads/dsh-chatgpt-plan-0.1.0.tgz"
+  plugin --profile desktop add "$HOME/Downloads/dsh-chatgpt-plan-0.1.1.tgz"
 ```
 
 安装过程会解析 `undici` 等运行时依赖，需要能够访问包仓库。不要仅复制单个源码文件。安装完成后重新打开 DSH，确认插件列表中的 `dsh-chatgpt-plan` 已启用。
@@ -87,6 +87,20 @@
 | 切换账号后模型不可用 | 重新选择新账号实际提供的模型 |
 | 提示授权失效 | 在账号页重新登录，不要复制其他应用的 token 文件 |
 | 提示凭据权限异常 | 检查文件属于当前用户、不是软链接，且只允许所有者读写；不要把账号文件发到 Issue |
+| 恢复目标时提示 `objective and max_goal_rounds are valid only with action edit` | 升级到 **0.1.1** 并重启 DSH；详见下方说明 |
+| 提示 `stale goal ref` 或 `the model cannot resume a paused goal` | 按下方说明检查目标版本与暂停状态 |
+
+### 目标恢复与工具参数错误
+
+**0.1.1 修复了可选工具参数被强制补齐的问题。** 0.1.0 的配置让 pi-ai 省略工具定义中的 `strict` 字段，Responses 接口可能因此把可选参数也转为必填。例如，`update_goal` 的 `resume` 调用会多出只适用于 `edit` 的 `max_goal_rounds`，被 DSH 拒绝。0.1.1 让 pi-ai 明确发送 `strict: false`，保留原有可选参数语义；参见 [OpenAI 的 strict 模式说明](https://developers.openai.com/api/docs/guides/function-calling#strict-mode)。
+
+目标恢复还受 DSH 自身的状态与权限规则约束：
+
+- **`stale goal ref`**：目标的版本已经变化，模型仍在使用旧的 `revision`。应先通过 `get_goal` 读取最新状态，再决定后续操作，不能重复使用旧版本。暂停、恢复等操作都会更新版本；这条错误本身不表示凭证失效或数据损坏。
+- **`the model cannot resume a paused goal`**：已暂停的目标需要用户在目标界面点击恢复，或在原会话中**单独发送 `/goal resume`**。普通聊天消息“继续”不能替代这条命令。
+- **重启后目标是 `active`，却没有自动续行**：它可能处于 `disarmed`，可用 `/goal resume` 重新启用。`max_goal_rounds` 限制自动续行轮数，每轮内部可以多次调用工具。
+
+这些规则来自当前验证的 DSH 0.2.0-rc.2 的[目标工具](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/goal/tool-goal/README.zh.md)和[用户命令](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/goal/command-goal/README.zh.md)。插件保留这些状态与权限检查。
 
 ## 数据与授权方式
 
@@ -156,7 +170,7 @@ npm test
 npm pack --ignore-scripts
 ```
 
-`npm test` 使用 Node 内置测试工具和模拟响应，不需要真实账号、互联网或已安装的 DSH 宿主依赖。`npm pack` 生成 `dsh-chatgpt-plan-0.1.0.tgz`，按前述命令安装；实际运行的依赖由 DSH 安装过程解析。
+`npm test` 使用 Node 内置测试工具和模拟响应，不需要真实账号、互联网或已安装的 DSH 宿主依赖。`npm pack` 生成 `dsh-chatgpt-plan-0.1.1.tgz`，按前述命令安装；实际运行的依赖由 DSH 安装过程解析。
 
 测试覆盖账号隔离、PKCE / 身份校验、切换取消、续期退避、401 重试、撤销、存储权限、配置隔离、端口冲突、网络设置和管理页访问控制。在安装了兼容版本 DSH 的 macOS 上，还可运行原生适配器模拟测试：
 
@@ -165,7 +179,7 @@ ELECTRON_RUN_AS_NODE=1 "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSe
   scripts/wire-test.mjs
 ```
 
-这个测试也使用模拟网络。模拟通过不代表任意真实账号都具备接入资格；真实验证需要账号所有者完成授权。
+这个测试也使用模拟网络，并检查经过 DSH / pi-ai 转换后的请求明确包含 `strict: false`、可选工具参数仍然可选，覆盖账号切换与 401 续期重试。模拟通过不代表任意真实账号都具备接入资格；真实验证需要账号所有者完成授权。
 
 ## 许可与图标
 

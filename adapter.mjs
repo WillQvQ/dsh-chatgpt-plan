@@ -31,7 +31,10 @@ export function catalogModels(entries) {
       maxTokens: 32000, input: entry.input_modalities?.includes('image') ? ['text', 'image'] : ['text'],
       reasoning: levels.size > 0, thinkingLevelMap: Object.fromEntries(LEVELS.map(level => [level, levels.has(level) ? level : null])),
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-      compat: { supportsDeveloperRole: true, supportsMaxOutputTokens: false, supportsLongCacheRetention: false, supportsStrictMode: false, supportsToolSearch: false, supportsAdditionalTools: false },
+      // Allow pi-ai to emit its default `strict: false`. Disabling this
+      // capability omits the flag; Responses then normalizes optional tool
+      // parameters into required ones (e.g. edit-only fields on goal resume).
+      compat: { supportsDeveloperRole: true, supportsMaxOutputTokens: false, supportsLongCacheRetention: false, supportsStrictMode: true, supportsToolSearch: false, supportsAdditionalTools: false },
     };
   });
 }

@@ -12,7 +12,7 @@ This is an unofficial local plugin with MIT-licensed source code. Each user auth
 
 | Component | Version / requirement |
 | --- | --- |
-| Plugin | **0.1.0** |
+| Plugin | **0.1.1** |
 | DeepSeek Harness | **0.2.0-rc.2** |
 | pi-ai used by DSH | **0.87.1**, supplied by the host |
 | Verified desktop platform | macOS; other platforms have not been verified |
@@ -24,13 +24,13 @@ For details on the host's pi-ai dependency, the implementations this plugin reus
 
 ## Install
 
-Download **`dsh-chatgpt-plan-0.1.0.tgz`** from the [v0.1.0 release](https://github.com/WillQvQ/dsh-chatgpt-plan/releases/tag/v0.1.0). Use this plugin package; GitHub's automatically generated Source code archives are for browsing the source.
+Download **`dsh-chatgpt-plan-0.1.1.tgz`** from the [v0.1.1 release](https://github.com/WillQvQ/dsh-chatgpt-plan/releases/tag/v0.1.1). Use this plugin package; GitHub's automatically generated Source code archives are for browsing the source.
 
 Quit DSH completely. On macOS, run this in Terminal, assuming the file is in Downloads and the App is in `/Applications`:
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add "$HOME/Downloads/dsh-chatgpt-plan-0.1.0.tgz"
+  plugin --profile desktop add "$HOME/Downloads/dsh-chatgpt-plan-0.1.1.tgz"
 ```
 
 DSH resolves runtime dependencies, including `undici`, during installation, so access to the package registry is required. Do not replace individual source files. Reopen DSH and confirm `dsh-chatgpt-plan` is enabled in the plugin list.
@@ -87,6 +87,20 @@ Signing out attempts to revoke the registration's renewable session, then remove
 | Model unavailable after switching accounts | Select a model actually returned for the new account |
 | Authorization expired | Sign in again; do not copy another app's token files |
 | Credential permission error | Check current-user ownership, owner-only permissions, and that the file is not a symlink; never attach account files to an issue |
+| Resuming a goal reports `objective and max_goal_rounds are valid only with action edit` | Upgrade to **0.1.1** and restart DSH; see below |
+| `stale goal ref` or `the model cannot resume a paused goal` | Check the goal revision and paused state as described below |
+
+### Goal recovery and tool argument errors
+
+**0.1.1 fixes optional tool parameters being forced into calls.** In 0.1.0, the plugin configuration made pi-ai omit `strict` from tool definitions. The Responses API may then normalize optional parameters into required ones. For example, an `update_goal` call with `action: "resume"` could include the edit-only `max_goal_rounds` field and be rejected by DSH. Version 0.1.1 makes pi-ai explicitly send `strict: false`, preserving optional parameters. See [OpenAI's strict-mode documentation](https://developers.openai.com/api/docs/guides/function-calling#strict-mode).
+
+Goal recovery also follows DSH's own state and permission rules:
+
+- **`stale goal ref`**: the goal has changed, but the model is using an old `revision`. Read the current state with `get_goal` before deciding what to do next; do not retry the old revision. Operations such as pausing and resuming advance the revision. This error alone does not indicate expired credentials or corrupted data.
+- **`the model cannot resume a paused goal`**: the user must click Resume in the goal interface or send **`/goal resume` by itself** in the original conversation. An ordinary chat message such as “continue” does not replace this command.
+- **An `active` goal does not continue automatically after a restart**: it may be `disarmed`; use `/goal resume` to re-enable continuation. `max_goal_rounds` limits automatic continuation rounds, each of which can contain multiple tool calls.
+
+These rules come from the [goal tools](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/goal/tool-goal/README.md) and [user commands](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/goal/command-goal/README.md) in the verified DSH 0.2.0-rc.2 source. The plugin preserves these state and permission checks.
 
 ## Data and authorization
 
@@ -156,7 +170,7 @@ npm test
 npm pack --ignore-scripts
 ```
 
-`npm test` uses Node's built-in runner and mocked responses. It needs no real account, internet connection, or installed DSH host dependencies. `npm pack` creates `dsh-chatgpt-plan-0.1.0.tgz`; install it as described above. DSH resolves dependencies for actual runtime use during installation.
+`npm test` uses Node's built-in runner and mocked responses. It needs no real account, internet connection, or installed DSH host dependencies. `npm pack` creates `dsh-chatgpt-plan-0.1.1.tgz`; install it as described above. DSH resolves dependencies for actual runtime use during installation.
 
 Tests cover account isolation, PKCE and identity validation, cancellation on switching, renewal and backoff, 401 retry, revocation, storage permissions, profile isolation, port conflicts, network settings, and management-page access control. On macOS with the compatible DSH version installed, also run the native adapter simulation:
 
@@ -165,7 +179,7 @@ ELECTRON_RUN_AS_NODE=1 "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSe
   scripts/wire-test.mjs
 ```
 
-This test also mocks the network. Passing simulations does not establish eligibility for every real account; actual use requires the account owner's authorization.
+This test also mocks the network. It checks that requests emitted through DSH and pi-ai explicitly include `strict: false` and retain optional tool parameters, including after account switching and a 401 refresh retry. Passing simulations does not establish eligibility for every real account; actual use requires the account owner's authorization.
 
 ## License and artwork
 
