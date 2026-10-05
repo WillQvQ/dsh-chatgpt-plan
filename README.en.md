@@ -12,7 +12,7 @@ This is an unofficial local plugin with MIT-licensed source code. Each user auth
 
 | Component | Version / requirement |
 | --- | --- |
-| Plugin | **0.1.2** |
+| Plugin | **0.1.3** |
 | DeepSeek Harness | **0.2.0-rc.2** |
 | pi-ai used by DSH | **0.87.1**, supplied by the host |
 | Verified desktop platform | macOS; other platforms have not been verified |
@@ -24,13 +24,13 @@ For details on the host's pi-ai dependency, the implementations this plugin reus
 
 ## Install
 
-Download **`dsh-chatgpt-plan-0.1.2.tgz`** from the [v0.1.2 release](https://github.com/WillQvQ/dsh-chatgpt-plan/releases/tag/v0.1.2). Use this plugin package; GitHub's automatically generated Source code archives are for browsing the source.
+Download **`dsh-chatgpt-plan-0.1.3.tgz`** from the [v0.1.3 release](https://github.com/WillQvQ/dsh-chatgpt-plan/releases/tag/v0.1.3). Use this plugin package; GitHub's automatically generated Source code archives are for browsing the source.
 
 Quit DSH completely. On macOS, run this in Terminal, assuming the file is in Downloads and the App is in `/Applications`:
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add "$HOME/Downloads/dsh-chatgpt-plan-0.1.2.tgz"
+  plugin --profile desktop add "$HOME/Downloads/dsh-chatgpt-plan-0.1.3.tgz"
 ```
 
 DSH resolves runtime dependencies, including `undici`, during installation, so access to the package registry is required. Do not replace individual source files. Reopen DSH and confirm `dsh-chatgpt-plan` is enabled in the plugin list.
@@ -84,15 +84,22 @@ Signing out attempts to revoke the registration's renewable session, then remove
 | No plugin settings | Confirm installation in the active DSH profile and that the plugin is enabled, then quit and reopen DSH |
 | Signed in, but no models | Confirm plan permission, refresh models, and check eligibility and network settings |
 | Browser sign-in works, but the plugin cannot connect | Check browser and plugin network settings separately |
+| Sign-in page reports `Invalid Origin` | Upgrade to **0.1.3**, restart DSH, and reopen the account management page; see below |
 | Model unavailable after switching accounts | Select a model actually returned for the new account |
 | Authorization expired | Sign in again; do not copy another app's token files |
 | Credential permission error | Check current-user ownership, owner-only permissions, and that the file is not a symlink; never attach account files to an issue |
-| Resuming a goal reports `objective and max_goal_rounds are valid only with action edit` | Upgrade to **0.1.2** and restart DSH; see below |
+| Resuming a goal reports `objective and max_goal_rounds are valid only with action edit` | Upgrade to **0.1.3** and restart DSH; see below |
 | `stale goal ref` or `the model cannot resume a paused goal` | Check the goal revision and paused state as described below |
+
+<a id="sign-in-invalid-origin"></a>
+
+### Invalid Origin on sign-in (fixed in 0.1.3)
+
+The previous management page's `no-referrer` policy made browser login forms send `Origin: null`, which local origin validation rejected. Version 0.1.3 uses `same-origin` only for the management page; OAuth callbacks retain `no-referrer`, and origin and CSRF checks remain enforced. After upgrading and restarting DSH, reopen the account management page before signing in; do not reload the old `/oauth/start` error page.
 
 ### Images and error recovery (fixed in 0.1.2)
 
-If reading an image leads to `Attachment reference is invalid.`, or the turn fails with `Cannot read properties of undefined (reading 'includes')`, upgrade to **0.1.2**, quit and reopen DSH, then retry in the original conversation.
+If reading an image leads to `Attachment reference is invalid.`, or the turn fails with `Cannot read properties of undefined (reading 'includes')`, upgrade to **0.1.3**, quit and reopen DSH, then retry in the original conversation.
 
 Earlier versions passed the path mapper and attachment reference to DSH's image-access helper in the wrong order, causing image-bearing requests to fail during local request construction. The plugin also supplied an incomplete retry policy, so error recovery threw a second exception that hid the original failure. Version 0.1.2 corrects the argument order and uses DSH's policy resolver to populate retry codes and backoff settings.
 
@@ -178,7 +185,7 @@ npm test
 npm pack --ignore-scripts
 ```
 
-`npm test` uses Node's built-in runner and mocked responses. It needs no real account, internet connection, or installed DSH host dependencies. `npm pack` creates `dsh-chatgpt-plan-0.1.2.tgz`; install it as described above. DSH resolves dependencies for actual runtime use during installation.
+`npm test` uses Node's built-in runner and mocked responses. It needs no real account, internet connection, or installed DSH host dependencies. `npm pack` creates `dsh-chatgpt-plan-0.1.3.tgz`; install it as described above. DSH resolves dependencies for actual runtime use during installation.
 
 Tests cover account isolation, PKCE and identity validation, cancellation on switching, renewal and backoff, 401 retry, revocation, storage permissions, profile isolation, port conflicts, network settings, and management-page access control. On macOS with the compatible DSH version installed, also run the native adapter simulation:
 
@@ -190,6 +197,14 @@ ELECTRON_RUN_AS_NODE=1 "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSe
 ```
 
 Both tests mock the network. The image test uses DSH's native attachment store, model adapter, and retry executor to cover user images, tool screenshots, invalid attachments, preservation of original errors, and the two-retry limit. The other test checks that requests emitted through DSH and pi-ai explicitly include `strict: false` and retain optional tool parameters, including after account switching and a 401 refresh retry. Passing simulations does not establish eligibility for every real account; actual use requires the account owner's authorization.
+
+The browser sign-in regression requires Playwright to be importable from the current Node environment and a corresponding browser to be installed. For example, with Microsoft Edge installed:
+
+```sh
+PLAYWRIGHT_CHANNEL=msedge node scripts/management-browser-test.mjs
+```
+
+If Playwright is elsewhere, set `PLAYWRIGHT_MODULE` to its module entry's absolute path or `file:` URL. This real-browser test covers adding an account, signing in again, authorizing plan usage, and suppressing referrers after callbacks. Authorization is mocked on loopback; it reads no real accounts and consumes no plan allowance.
 
 ## License and artwork
 

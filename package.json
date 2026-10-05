@@ -1,6 +1,6 @@
 {
   "name": "dsh-chatgpt-plan",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Use your ChatGPT plan in DeepSeek Harness with independent Sign in with ChatGPT authorization",
   "type": "module",
   "main": "index.mjs",

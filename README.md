@@ -12,7 +12,7 @@
 
 | 项目 | 版本 / 要求 |
 | --- | --- |
-| 插件 | **0.1.2** |
+| 插件 | **0.1.3** |
 | DeepSeek Harness | **0.2.0-rc.2** |
 | DSH 使用的 pi-ai | **0.87.1**（由宿主提供） |
 | 已验证的桌面环境 | macOS；其他平台尚未验证 |
@@ -24,13 +24,13 @@
 
 ## 安装
 
-从 [v0.1.2 Releases](https://github.com/WillQvQ/dsh-chatgpt-plan/releases/tag/v0.1.2) 下载 **`dsh-chatgpt-plan-0.1.2.tgz`**。使用这个插件包；GitHub 自动生成的 Source code 压缩包用于查看源码。
+从 [v0.1.3 Releases](https://github.com/WillQvQ/dsh-chatgpt-plan/releases/tag/v0.1.3) 下载 **`dsh-chatgpt-plan-0.1.3.tgz`**。使用这个插件包；GitHub 自动生成的 Source code 压缩包用于查看源码。
 
 先完全退出 DSH。在 macOS 终端执行以下命令（假设文件保存在下载目录，App 安装在 `/Applications`）：
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add "$HOME/Downloads/dsh-chatgpt-plan-0.1.2.tgz"
+  plugin --profile desktop add "$HOME/Downloads/dsh-chatgpt-plan-0.1.3.tgz"
 ```
 
 安装过程会解析 `undici` 等运行时依赖，需要能够访问包仓库。不要仅复制单个源码文件。安装完成后重新打开 DSH，确认插件列表中的 `dsh-chatgpt-plan` 已启用。
@@ -84,15 +84,22 @@
 | 设置中没有插件入口 | 确认安装到正在使用的 DSH 配置、插件已启用，再完全退出并重新打开 DSH |
 | 登录成功但没有模型 | 确认已允许套餐使用，刷新模型列表，并检查账号资格及网络 |
 | 浏览器能授权，插件连接失败 | 分别检查浏览器网络和插件网络设置 |
+| 登录页面提示 `Invalid Origin` | 升级到 **0.1.3**、重启 DSH，再重新打开账号管理页；详见下方说明 |
 | 切换账号后模型不可用 | 重新选择新账号实际提供的模型 |
 | 提示授权失效 | 在账号页重新登录，不要复制其他应用的 token 文件 |
 | 提示凭据权限异常 | 检查文件属于当前用户、不是软链接，且只允许所有者读写；不要把账号文件发到 Issue |
-| 恢复目标时提示 `objective and max_goal_rounds are valid only with action edit` | 升级到 **0.1.2** 并重启 DSH；详见下方说明 |
+| 恢复目标时提示 `objective and max_goal_rounds are valid only with action edit` | 升级到 **0.1.3** 并重启 DSH；详见下方说明 |
 | 提示 `stale goal ref` 或 `the model cannot resume a paused goal` | 按下方说明检查目标版本与暂停状态 |
+
+<a id="sign-in-invalid-origin"></a>
+
+### 登录页面提示 Invalid Origin（0.1.3 修复）
+
+旧版管理页的 `no-referrer` 策略会让浏览器登录表单发送 `Origin: null`，被本地来源校验拒绝。0.1.3 仅将管理页改为 `same-origin`；OAuth 回调仍使用 `no-referrer`，来源与 CSRF 校验继续生效。升级并重启 DSH 后，重新打开账号管理页再点击登录，不要刷新旧的 `/oauth/start` 错误页面。
 
 ### 图片与错误恢复（0.1.2 修复）
 
-如果读取图片后出现 `Attachment reference is invalid.`，或本轮运行失败显示 `Cannot read properties of undefined (reading 'includes')`，请升级到 **0.1.2** 并完全重启 DSH，再在原会话中重试。
+如果读取图片后出现 `Attachment reference is invalid.`，或本轮运行失败显示 `Cannot read properties of undefined (reading 'includes')`，请升级到 **0.1.3** 并完全重启 DSH，再在原会话中重试。
 
 旧版本调用 DSH 图片附件函数时传反了路径映射与附件引用参数，导致带图片的模型请求在本地构造阶段失败；同时，插件提供的重试策略缺少错误码列表和退避参数，错误恢复又触发第二次异常，掩盖了原始原因。0.1.2 修正了参数顺序，并使用 DSH 的策略解析器补全重试配置。
 
@@ -178,7 +185,7 @@ npm test
 npm pack --ignore-scripts
 ```
 
-`npm test` 使用 Node 内置测试工具和模拟响应，不需要真实账号、互联网或已安装的 DSH 宿主依赖。`npm pack` 生成 `dsh-chatgpt-plan-0.1.2.tgz`，按前述命令安装；实际运行的依赖由 DSH 安装过程解析。
+`npm test` 使用 Node 内置测试工具和模拟响应，不需要真实账号、互联网或已安装的 DSH 宿主依赖。`npm pack` 生成 `dsh-chatgpt-plan-0.1.3.tgz`，按前述命令安装；实际运行的依赖由 DSH 安装过程解析。
 
 测试覆盖账号隔离、PKCE / 身份校验、切换取消、续期退避、401 重试、撤销、存储权限、配置隔离、端口冲突、网络设置和管理页访问控制。在安装了兼容版本 DSH 的 macOS 上，还可运行原生适配器模拟测试：
 
@@ -190,6 +197,14 @@ ELECTRON_RUN_AS_NODE=1 "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSe
 ```
 
 这两项测试也使用模拟网络。图片测试通过 DSH 原生附件存储、模型适配器和重试执行器，覆盖用户图片、工具截图、无效附件、原始错误保留及最多两次请求重试。另一项测试检查经过 DSH / pi-ai 转换后的请求明确包含 `strict: false`、可选工具参数仍然可选，覆盖账号切换与 401 续期重试。模拟通过不代表任意真实账号都具备接入资格；真实验证需要账号所有者完成授权。
+
+浏览器登录回归测试需要当前 Node 环境能够导入 Playwright，并已安装对应浏览器。例如，使用已安装的 Microsoft Edge：
+
+```sh
+PLAYWRIGHT_CHANNEL=msedge node scripts/management-browser-test.mjs
+```
+
+若 Playwright 位于其他目录，可用 `PLAYWRIGHT_MODULE` 指定其模块入口的绝对路径或 `file:` URL。该测试用真实浏览器验证添加账号、重新登录、授权套餐三个表单，以及回调后的来源信息保护；授权服务使用本地模拟，不读取真实账号或消耗套餐额度。
 
 ## 许可与图标
 

@@ -35,7 +35,12 @@ export async function startManagement(auth, { port = 18762, network, profile = '
       if (req.headers.host !== new URL(origin).host) return send(403, { error: 'Invalid Host' });
       const url = new URL(req.url, origin);
       if (req.method === 'OPTIONS') return allowedOrigin ? send(204, '') : send(403, { error: 'Invalid Origin' });
-      if (req.method === 'GET' && url.pathname === '/') return send(200, managementHtml({ csrf, nonce }), 'text/html');
+      if (req.method === 'GET' && url.pathname === '/') {
+        // A no-referrer document submits forms with Origin: null. Keep the
+        // same-origin login form usable while suppressing cross-origin referrers.
+        security['referrer-policy'] = 'same-origin';
+        return send(200, managementHtml({ csrf, nonce }), 'text/html');
+      }
       if (req.method === 'GET' && url.pathname === '/auth/callback') {
         try { await auth.callback(url); }
         catch (error) { auth.notice = error.message; }

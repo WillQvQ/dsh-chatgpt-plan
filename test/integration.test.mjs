@@ -137,6 +137,31 @@ test('management endpoint blocks cross-origin mutations, missing CSRF and malici
   assert.equal(result.status, 303); assert.equal(new URL(result.headers.get('location')).hostname, 'auth.openai.com');
 });
 
+test('login page permits same-origin form submissions without weakening origin or callback protection', async t => {
+  const f = await fixture(t), manager = await startManagement(f.auth, { port: 0 }); t.after(() => manager.close());
+  const page = await fetch(manager.origin);
+  assert.equal(page.headers.get('referrer-policy'), 'same-origin');
+  await page.text();
+  for (const origin of [undefined, 'null', 'https://evil.invalid']) {
+    const response = await fetch(manager.origin + '/oauth/start', {
+      method: 'POST', redirect: 'manual',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...(origin === undefined ? {} : { Origin: origin }) },
+      body: new URLSearchParams({ csrf: manager.csrf, newProfile: 'true' }),
+    });
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).error, 'Invalid Origin');
+  }
+  const missingCsrf = await fetch(manager.origin + '/oauth/start', {
+    method: 'POST', redirect: 'manual', headers: { Origin: manager.origin, 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'newProfile=true',
+  });
+  assert.equal(missingCsrf.status, 403);
+  assert.equal((await missingCsrf.json()).error, 'Invalid CSRF token');
+  const callback = await fetch(manager.origin + '/auth/callback?state=invalid&code=test-only', { redirect: 'manual' });
+  assert.equal(callback.status, 303);
+  assert.equal(callback.headers.get('referrer-policy'), 'no-referrer');
+  assert.equal(callback.headers.get('location'), '/');
+});
+
 test('two different ChatGPT identities retain separate models and labels; sign-out never falls back to another account', async t => {
   const f = await fixture(t); await f.finish(await f.begin());
   const first = (await f.store.load()).profiles[0];
